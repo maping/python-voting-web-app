@@ -4,26 +4,15 @@ import random
 import redis
 import socket
 import sys
+import requests
 
 app = Flask(__name__)
 
-# Load configurations from environment or config file
+# Load configurations
 app.config.from_pyfile('config_file.cfg')
-
-if ("VOTE1VALUE" in os.environ and os.environ['VOTE1VALUE']):
-    button1 = os.environ['VOTE1VALUE']
-else:
-    button1 = app.config['VOTE1VALUE']
-
-if ("VOTE2VALUE" in os.environ and os.environ['VOTE2VALUE']):
-    button2 = os.environ['VOTE2VALUE']
-else:
-    button2 = app.config['VOTE2VALUE']
-
-if ("TITLE" in os.environ and os.environ['TITLE']):
-    title = os.environ['TITLE']
-else:
-    title = app.config['TITLE']
+button1 =       app.config['VOTE1VALUE']  
+button2 =       app.config['VOTE2VALUE']
+title =         app.config['TITLE']
 
 # Redis configurations
 redis_server = os.environ['REDIS']
@@ -82,7 +71,25 @@ def index():
             vote2 = r.get(button2).decode('utf-8')  
                 
             # Return results
-            return render_template("index.html", value1=int(vote1), value2=int(vote2), button1=button1, button2=button2, title=title)
+            # return render_template("index.html", value1=int(vote1), value2=int(vote2), button1=button1, button2=button2, title=title)
 
+            # Get the top vote
+            # http://azure-calculator-api:8080 for local docker testing
+            # http://azure-calculator-api.default:8080 for K8S
+            #resp = requests.get('http://azure-calculator-api:8080/api/calculator/max?x=' + vote1 + '&y=' + vote2)
+            resp = requests.get('http://azure-calculator-api.default:8080/api/calculator/max?x=' + vote1 + '&y=' + vote2)
+    	    
+            if resp.status_code != 200:
+                # This means something went wrong.
+                raise ApiError('GET /api/calculator/max {}'.format(resp.status_code))
+            result = resp.json()["result"]
+
+            if int(result) == int(vote1):
+                topvote = button1
+            else:
+                topvote = button2            
+    
+            # Return results
+            return render_template("index.html", topvote=topvote, value1=int(vote1), value2=int(vote2), button1=button1, button2=button2, title=title)
 if __name__ == "__main__":
     app.run()

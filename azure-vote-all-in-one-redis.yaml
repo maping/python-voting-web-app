@@ -44,7 +44,7 @@ spec:
     spec:
       containers:
       - name: azure-vote-front
-        image: qianhongwesteurope.azurecr.io/azure-vote-front:v1.0
+        image: qianhongwesteurope.azurecr.io/azure-vote-front:v1.2
         ports:
         - containerPort: 80
         resources:
@@ -66,3 +66,44 @@ spec:
   - port: 80
   selector:
     app: azure-vote-front
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: azure-calculator-api
+spec:
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  minReadySeconds: 5 
+  template:
+    metadata:
+      labels:
+        app: azure-calculator-api
+    spec:
+      containers:
+      - name: azure-calculator-api
+        image: qianhongwesteurope.azurecr.io/azure-calculator-api
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: 250m
+          limits:
+            cpu: 500m
+        env:
+      imagePullSecrets:
+      - name: myregistrykey
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: azure-calculator-api
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 8080
+  selector:
+    app: azure-calculator-api
